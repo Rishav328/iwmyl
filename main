@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Happy Birthday Liza</title>
+    <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+    <!-- SweetAlert2 for beautiful popups -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        :root {
+            --bg-gradient: linear-gradient(135deg, #5c0011 0%, #c1121f 40%, #8338ec 100%);
+            --diary-width: min(92vw, 450px);
+            --diary-height: min(80vh, 650px);
+            --page-bg: #fdfaf6;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        /* Enforce background strictly to prevent grey screen bugs */
+        html, body {
+            width: 100%;
+            min-height: 100vh;
+            background: var(--bg-gradient) !important;
+            background-attachment: fixed !important;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Poppins', sans-serif;
+            overflow: hidden;
+            padding: 15px;
+        }
+
+        /* --- UI Controls (Fixed for Visibility) --- */
+        .ui-container {
+            width: var(--diary-width);
+            margin-top: 25px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            z-index: 100;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+        }
+
+        button {
+            background: #2b0008; /* Deep dark crimson for high contrast */
+            color: #ffffff;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            padding: 12px 24px;
+            border-radius: 30px;
+            font-family: 'Poppins', sans-serif;
+            font-weight: 600;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+            touch-action: manipulation;
+        }
+
+        button:active:not(:disabled) {
+            transform: scale(0.95);
+        }
+
+        button:disabled {
+            background: rgba(255, 255, 255, 0.15);
+            color: rgba(255, 255, 255, 0.4);
+            border-color: rgba(255, 255, 255, 0.1);
+            box-shadow: none;
+            cursor: not-allowed;
+        }
+
+        .progress-wrapper {
+            width: 100%;
+            height: 8px;
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 10px;
+            overflow: hidden;
+            position: relative;
+            box-shadow: inset 0 1px 4px rgba(0,0,0,0.5);
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #ff4d4d, #d8b4fe);
+            width: 0%;
+            transition: width 0.4s ease;
+            border-radius: 10px;
+        }
+
+        /* --- Diary Structure --- */
+        .diary-container {
+            position: relative;
+            width: var(--diary-width);
+            height: var(--diary-height);
+            perspective: 2000px; /* Enhanced 3D depth */
+            filter: drop-shadow(10px 15px 30px rgba(0, 0, 0, 0.5));
+        }
+
+        .spirals {
+            position: absolute;
+            left: -12px;
+            top: 2%;
+            bottom: 2%;
+            width: 30px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-evenly;
+            z-index: 1000;
+            pointer-events: none;
+        }
+
+        .ring {
+            width: 28px;
+            height: 10px;
+            background: linear-gradient(to bottom, #f0f0f0, #888, #f0f0f0);
+            border: 1px solid #333;
+            border-radius: 5px;
+            box-shadow: 2px 2px 5px rgba(0,0,0,0.6);
+        }
+
+        /* Page styling and 3D flip effect (Fixed UX) */
+        .page {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--page-bg);
+            border-radius: 5px 15px 15px 5px;
+            transform-origin: 0% 50%;
+
+            /* Smooth turn and fade, prevents clipping offscreen */
+            transition: transform 0.6s cubic-bezier(0.4, 0.0, 0.2, 1), opacity 0.5s ease;
+            box-shadow: inset -5px 0 15px rgba(0,0,0,0.03), 2px 0 5px rgba(0,0,0,0.1);
+
+            padding: 30px 20px 30px 45px; /* Safe padding for spine */
+            display: flex;
+            flex-direction: column;
+        }
+
+        .page.flipped {
+            /* Turns gently and fades instead of swinging wildly off screen */
+            transform: rotateY(-70deg) scale(0.95);
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .page-content {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .page-number {
+            position: absolute;
+            bottom: -15px;
+            right: 0;
+            font-size: 0.75rem;
+            color: #999;
+            font-family: 'Poppins', sans-serif;
+        }
+
+        /* Cover Specifics */
+        .cover {
+            background: #111;
+            background-image: radial-gradient(circle at 50% 50%, #2a2a2a 0%, #050505 100%);
+            color: #fff;
+            align-items: center;
+            justify-content: center;
+            box-shadow: inset -5px 0 20px rgba(0,0,0,0.8);
+            padding: 20px;
+        }
+
+        .cover h1 {
+            font-family: 'Caveat', cursive;
+            font-size: clamp(3.5rem, 10vw, 4.5rem);
+            transform: rotate(-5deg);
+            color: #fff;
+            text-shadow: 2px 2px 10px rgba(255, 255, 255, 0.3);
+            text-align: center;
+            line-height: 1.1;
+        }
+
+        /* --- Inside Page Content --- */
+        .topic-title {
+            font-family: 'Caveat', cursive;
+            font-size: clamp(2.2rem, 8vw, 3rem);
+            color: #111;
+            margin-bottom: 15px;
+            border-bottom: 2px solid rgba(0,0,0,0.1);
+            text-align: center;
+            line-height: 1.2;
+        }
+
+        /* Notebook Style Pages */
+        .even-page-text {
+            font-family: 'Caveat', cursive;
+            font-size: clamp(1.4rem, 5.5vw, 1.7rem);
+            color: #222;
+            text-align: left;
+            height: 100%;
+            width: 100%;
+
+            line-height: 32px;
+            background-image: repeating-linear-gradient(transparent, transparent 31px, #a8d0e6 31px, #a8d0e6 32px);
+            border-left: 2px solid #ff8a80;
+
+            padding-top: 31px;
+            padding-left: 15px;
+            margin-left: 5px;
+
+            /* Hidden fallback scroll just in case */
+            overflow-y: auto;
+            scrollbar-width: none;
+        }
+        .even-page-text::-webkit-scrollbar { display: none; }
+
+        /* Polaroid Layout (UX FIXED - Flexbox replaces absolute positioning) */
+        .polaroid-gallery {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+            width: 100%;
+        }
+
+        .polaroid {
+            background: #fff;
+            padding: 8px 8px 25px 8px;
+            box-shadow: 2px 4px 15px rgba(0,0,0,0.15);
+            width: clamp(130px, 40vw, 160px);
+            display: flex;
+            flex-direction: column;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .polaroid img {
+            width: 100%;
+            aspect-ratio: 1/1;
+            object-fit: cover;
+            background-color: #f0f0f0;
+            border: 1px solid #e0e0e0;
+        }
+
+        .polaroid .note {
+            font-family: 'Caveat', cursive;
+            font-size: clamp(1.1rem, 4vw, 1.3rem);
+            color: #222;
+            text-align: center;
+            margin-top: 8px;
+            line-height: 1;
+        }
+
+        /* Doodles */
+        .doodle {
+            position: absolute;
+            pointer-events: none;
+            opacity: 0.6;
+        }
+
+        .doodle svg {
+            width: 40px;
+            height: 40px;
+            stroke: #222;
+            stroke-width: 2;
+            fill: none;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        /* --- Birthday Confetti Animation --- */
+        @keyframes confetti-fall {
+            0% { transform: translateY(-5vh) rotate(0deg); opacity: 1; }
+            100% { transform: translateY(110vh) rotate(720deg); opacity: 0; }
+        }
+
+    </style>
+</head>
+<body>
+
+<div class="diary-container" id="diary">
+    <div class="spirals" id="spirals"></div>
+    <div id="pages-wrapper"></div>
+</div>
+
+<div class="ui-container">
+    <div class="controls">
+        <button id="prevBtn" onclick="prevPage()" disabled>&#8592; Previous</button>
+        <button id="nextBtn" onclick="nextPage()">Next Page &#8594;</button>
+    </div>
+    <div class="progress-wrapper">
+        <div class="progress-bar" id="progressBar"></div>
+    </div>
+</div>
+
+<script>
+    // --- Content Data ---
+    // Coordinates for polaroids removed. Rotations kept for character. Flexbox handles the layout.
+    const diaryData = [
+        { type: 'cover', title: 'Dear Diary' },
+
+        {
+            type: 'odd', topic: 'Opening / Care',
+            polaroids: [
+                { rot: '-4deg', img: './love/p12.jpg', note: 'Always caring' },
+                { rot: '5deg', img: './love/p11.jpg', note: 'My supporter' }
+            ],
+            doodles: [{ type: 'heart', top: '10%', right: '5%', rot: '15deg' }]
+        },
+        { type: 'even', text: "Hi, hope you are doing well!<br><br>Chinta ho rahi thi mujhe, in fact hoti rehti hai, because care karta hoon teri!<br><br>Agar tum God se puchogi na ki mere liye sabse valuable kaun hai, toh wo definitely tera hi naam lenge, for sure. You've been my forever supporter since 2022." },
+
+        {
+            type: 'odd', topic: 'Multiple Person',
+            polaroids: [
+                { rot: '4deg', img: './love/p21.jpg', note: 'Weird You' },
+                { rot: '-5deg', img: './love/p22.png', note: 'Vulnerable Me' }
+            ],
+            doodles: [{ type: 'butterfly', bottom: '10%', right: '5%', rot: '-20deg' }]
+        },
+        { type: 'even', text: "Every person has multiple faces and plays multiple characters to different people. In fact, tumhare dost bhi tumhe apna wo side dikhate hai jo wo dikhana chahte hai and same with you.<br><br>I'm the same too, just the difference is, except for 1 face, I've shown you all my faces — from the loved one, to the friend one, to the sad one, to the angry one, to the caring one, to the fight one, to the crying one, to the fighter, to the career-focused, to the chatter, to the overthinking, to the problem solver, to the physical one, to the lust one, to the listening one, to the science one, to the devoted one, and many more.<br><br>In short, I'm vulnerable towards you." },
+
+        {
+            type: 'odd', topic: 'Family & Safety',
+            polaroids: [
+                { rot: '-3deg', img: './love/p31.jpg', note: 'My safe space' },
+                { rot: '6deg', img: './love/p32.jpg', note: 'Peaceful' }
+            ],
+            doodles: [{ type: 'heart', top: '15%', right: '10%', rot: '10deg' }, { type: 'heart', bottom: '10%', left: '5%', rot: '-15deg', scale: 0.7 }]
+        },
+        { type: 'even', text: "Jaise maine pehle bhi kaha tha, family means feeling safe — and safe means saare worries fade ho jate hain, overthinking shut ho jati hai.<br><br>Just seeing you, talking to you, and laughing with you makes me happy." },
+
+        {
+            type: 'odd', topic: 'What I Love',
+            polaroids: [
+                { rot: '-4deg', img: './love/p41.jpg', note: 'That smile' },
+                { rot: '5deg', img: './love/p42.jpg', note: 'Heart at peace' }
+            ]
+        },
+        { type: 'even', text: "At first, I also wanted to make you feel happy by any means, make you feel safe, make you feel cared for, make you feel loved like you are my family. In fact, I called you family cause I mean it.<br><br>I loved the way you smile, I loved when you are happy, physically I loved your cheeks and neck you can say (like you like my skin, and wanted to do experiments lol). I remember me saying you sometimes wanna act like a kid, and sometimes mature, but all in front of me — and I absolutely love that.<br><br>I'm with you not because of attraction, but because my soul and heart feel at peace with your appearance." },
+
+        {
+            type: 'odd', topic: 'Witnessed All',
+            polaroids: [
+                { rot: '3deg', img: './love/p51.png', note: 'Every phase' },
+                { rot: '-4deg', img: './love/p52.png', note: 'My rock' }
+            ],
+            doodles: [{ type: 'butterfly', top: '10%', left: '5%', rot: '25deg' }]
+        },
+        { type: 'even', text: "You have literally seen my every phase from the starting — chahe mera OT mein darr ho, ya phir mere aansu jo main duniya se chhupata tha, meri uniqueness ko leke dedication se leke mere dreams ki reality, meri past insecurities se leke meri present condition.<br><br>Mereko na bas tu yaad aati hai when I'm mentally not ok. Sab dekha hai tumne jo tumhe chhor ke bas 2 aur logon ne dekha hai, and that is Me and God." },
+
+        {
+            type: 'odd', topic: 'Seen You Too',
+            polaroids: [
+                { rot: '-3deg', img: './love/p61.jpg', note: 'Seen real you' },
+                { rot: '4deg', img: './love/p62.jpg', note: 'Always there for u' }
+            ]
+        },
+        { type: 'even', text: "In fact, I have seen you too in your every aspect — being a 'self-lover', your caring side, your affectionate side whenever you became worried about me in my pain, your sad side whenever there's silence due to academics or health, your tears when you were in physical pain or stress.<br><br>Tumne ek baar mujhse promise kiya tha ki tum mere free ya casual time mein raho ya na raho, but you'll always be there whenever I feel sad, doubtful, and in problematic situations — and you actually proved it." },
+
+        {
+            type: 'odd', topic: 'Why I Choose You',
+            polaroids: [
+                { rot: '5deg', img: './love/p71.jpg', note: 'Family stays - Me' },
+                { rot: '-5deg', img: './love/p72.jpg', note: 'Family stays - You.' }
+            ],
+            doodles: [{ type: 'heart', top: '10%', right: '5%', rot: '-10deg' }, { type: 'heart', bottom: '5%', right: '5%', rot: '20deg', scale: 0.8 }]
+        },
+        { type: 'even', text: "You are just the person whom I love to be with. You understand me and listen to me much better.<br><br>Now if I choose you, it's not because of any stuff, I choose you because of all of your characters, because it's you. You might be wrong, you might hurt me, but I still choose you cause that's called a family.<br><br>Random people go, but family stays even when there are fights, anger, kuch bura bol diya, or u are in danger." },
+
+        {
+            type: 'odd', topic: 'All of Liza',
+            polaroids: [
+                { rot: '-4deg', img: './love/p81.jpg', note: 'All your colors' },
+                { rot: '5deg', img: './love/p82.jpg', note: 'Every shade' }
+            ],
+            doodles: [{ type: 'butterfly', bottom: '15%', left: '5%', rot: '-15deg' }]
+        },
+        { type: 'even', text: "I have seen Happy Liza, Sad Liza, Liza in fear, Liza in self-doubt, Liza in pain, Liza's cuteness, Liza's tears, Liza's wins, Liza's losses, and everything.<br><br>But who is the real you?<br><br>It's all the characters that make you 'you,' and I wish a Happy Birthday to all of you as a celebration!" },
+
+        {
+            type: 'odd', topic: 'Birthday Wish',
+            polaroids: [
+                { rot: '3deg', img: './love/p91.jpg', note: 'Happy Bday Motu!' },
+                { rot: '-4deg', img: './love/p92.jpg', note: 'Can\'t wait' }
+            ],
+            doodles: [{ type: 'heart', top: '12%', right: '8%', rot: '-15deg' }]
+        },
+        { type: 'even', text: "Happy Birthday Motu! ❤️<br><br>Have a great birthday. I wish I could be there with you, but God told me to build myself first.<br><br>I don't want that when you are in pain, all I can do is sit, or that I have financial constraints when making you feel special. I feel 1 event, just one event, changes everything inside me.<br><br>I'll be back stronger." },
+
+        {
+            type: 'odd', topic: 'The Promise',
+            polaroids: [
+                { rot: '-5deg', img: './love/p101.jpg', note: 'Growing together' },
+                { rot: '5deg', img: './love/p102.jpg', note: 'I promise.' }
+            ]
+        },
+        { type: 'even', text: "Aur ek last baat. Maine tumse bahut kuch maanga — presence, patience, understanding. Aur tumne diya, silently, consistently. Tumne kaha tha 'Khooj lungi' — and honestly, that one word meant more than paragraphs. Tumne kaha 'Stay' jab mujhe lagaa main kho raha hoon. Tumne kaha 'Just need you' — aur us ek line ne mujhe remind karaya ki yeh connection real hai.<br><br>So here's my promise back: Let's grow together. Let's make this bonding strong. Main pillar ban ne ki koshish kar raha hoon — not just for myself, but so that when you need me, I'm actually there — not just in words, but in every way that matters.<br><br>You stayed. I noticed. I'll never forget that. ❤️<br><br><a href='https://rishav328.github.io/rtg/dataL.html'>Click here, let's go in past for some time!</a>" }
+    ];
+
+    const svgs = {
+        heart: `<svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>`,
+        butterfly: `<svg viewBox="0 0 24 24"><path d="M12 15c-3-3-5-2-7 1 0 0 2-4 0-7 3 1 5-1 7-1 2 0 4 2 7 1-2 3 0 7 0 7-2-3-4-4-7-1z"></path><path d="M12 5v10"></path></svg>`
+    };
+
+    let currentPage = 0;
+    let totalPages = 0;
+    let paginatedData = [];
+
+    // Alert flags and audio
+    let hasAnimatedBirthday = false;
+    let hasAlertedChooseYou = false;
+    let hasAlertedPromise = false;
+    let bgMusic = new Audio('song/song.mp3');
+    bgMusic.loop = true;
+
+    const pagesWrapper = document.getElementById('pages-wrapper');
+    const nextBtn = document.getElementById('nextBtn');
+    const prevBtn = document.getElementById('prevBtn');
+    const progressBar = document.getElementById('progressBar');
+
+    function initDiary() {
+        // Setup Spirals
+        const spiralsContainer = document.getElementById('spirals');
+        for(let i=0; i<12; i++) {
+            const ring = document.createElement('div');
+            ring.className = 'ring';
+            spiralsContainer.appendChild(ring);
+        }
+
+        paginatedData = [];
+
+        // Build a hidden measurement page with exact dimensions
+        const measurePage = document.createElement('div');
+        measurePage.className = 'page';
+        measurePage.style.visibility = 'hidden';
+        measurePage.style.zIndex = '-1000';
+        pagesWrapper.appendChild(measurePage);
+
+        const contentWrapper = document.createElement('div');
+        contentWrapper.className = 'page-content';
+        measurePage.appendChild(contentWrapper);
+
+        const textContainer = document.createElement('div');
+        textContainer.className = 'even-page-text';
+        contentWrapper.appendChild(textContainer);
+
+        // Pagination Logic
+        diaryData.forEach(item => {
+            if (item.type === 'even') {
+                // Pre-process text to respect breaks
+                const textChunks = item.text.replace(/<br><br>/g, ' <br><br> ').split(' ');
+                let currentContent = '';
+
+                for(let i=0; i<textChunks.length; i++) {
+                    const chunk = textChunks[i];
+                    const prevContent = currentContent;
+                    currentContent = currentContent ? currentContent + ' ' + chunk : chunk;
+
+                    textContainer.innerHTML = currentContent;
+
+                    // Check if height exceeds notebook page
+                    if (textContainer.scrollHeight > textContainer.clientHeight) {
+                        paginatedData.push({ type: 'even', text: prevContent });
+                        currentContent = chunk;
+                    }
+                }
+                if (currentContent) {
+                    paginatedData.push({ type: 'even', text: currentContent });
+                }
+            } else {
+                paginatedData.push(item);
+            }
+        });
+
+        measurePage.remove();
+        totalPages = paginatedData.length;
+
+        // Generate DOM
+        paginatedData.forEach((data, index) => {
+            const pageEl = document.createElement('div');
+            pageEl.className = 'page';
+            pageEl.style.zIndex = totalPages - index;
+            pageEl.id = `page-${index}`;
+
+            if (data.type === 'cover') {
+                pageEl.classList.add('cover');
+                pageEl.innerHTML = `<h1>${data.title}</h1>`;
+            } else {
+                let html = `<div class="page-content">`;
+
+                if (data.type === 'odd') {
+                    html += `<div class="topic-title">${data.topic}</div>`;
+                    html += `<div class="polaroid-gallery">`;
+                    if(data.polaroids) {
+                        data.polaroids.forEach((p) => {
+                            html += `
+                                <div class="polaroid" style="transform: rotate(${p.rot});">
+                                    <img src="${p.img}" loading="lazy" alt="Image missing">
+                                    <div class="note">${p.note}</div>
+                                </div>`;
+                        });
+                    }
+                    html += `</div>`;
+
+                    if(data.doodles) {
+                        data.doodles.forEach(d => {
+                            const styleStr = `
+                                    ${d.top ? 'top:'+d.top+';' : ''}
+                                    ${d.bottom ? 'bottom:'+d.bottom+';' : ''}
+                                    ${d.left ? 'left:'+d.left+';' : ''}
+                                    ${d.right ? 'right:'+d.right+';' : ''}
+                                    transform: rotate(${d.rot}) ${d.scale ? 'scale('+d.scale+')' : ''};
+                                `;
+                            html += `<div class="doodle" style="${styleStr}">${svgs[d.type]}</div>`;
+                        });
+                    }
+                } else if (data.type === 'even') {
+                    html += `<div class="even-page-text">${data.text}</div>`;
+                }
+
+                // Add Page Number
+                html += `<div class="page-number">Page ${index} / ${totalPages - 1}</div>`;
+                html += `</div>`;
+                pageEl.innerHTML = html;
+            }
+
+            pagesWrapper.appendChild(pageEl);
+        });
+
+        updateUI();
+    }
+
+    // --- Interaction Logic ---
+    function nextPage() {
+        if (currentPage < totalPages - 1) {
+            document.getElementById(`page-${currentPage}`).classList.add('flipped');
+            currentPage++;
+            updateUI();
+        }
+    }
+
+    function prevPage() {
+        if (currentPage > 0) {
+            currentPage--;
+            document.getElementById(`page-${currentPage}`).classList.remove('flipped');
+            updateUI();
+        }
+    }
+
+    function updateUI() {
+        prevBtn.disabled = currentPage === 0;
+        nextBtn.disabled = currentPage === totalPages - 1;
+
+        if(currentPage === totalPages - 1) {
+            nextBtn.innerHTML = "Finished ❤️";
+        } else {
+            nextBtn.innerHTML = "Next Page &#8594;";
+        }
+
+        const progressPercent = (currentPage / (totalPages - 1)) * 100;
+        progressBar.style.width = `${progressPercent}%`;
+
+        const currentData = paginatedData[currentPage];
+        if (currentData) {
+
+            // 1. "Why I Choose You" Alert
+            const isChooseYou = currentData.topic === 'Why I Choose You' || (currentData.text && currentData.text.includes('family stays even when there are fights'));
+            if (isChooseYou && !hasAlertedChooseYou) {
+                hasAlertedChooseYou = true;
+                Swal.fire({
+                    title: 'Because it\'s you ❤️',
+                    text: 'I choose all of your characters, because you are my family.',
+                    confirmButtonText: 'I know ❤️',
+                    confirmButtonColor: '#2b0008',
+                    background: '#fdfaf6',
+                    backdrop: `rgba(0,0,0,0.7)`
+                });
+            }
+
+            // 2. "Birthday Wish" Alert & Confetti
+            const isBdayOdd = currentData.topic === 'Birthday Wish';
+            const isBdayEven = currentData.text && currentData.text.includes('Happy Birthday Motu!');
+
+            if ((isBdayOdd || isBdayEven) && !hasAnimatedBirthday) {
+                hasAnimatedBirthday = true;
+                Swal.fire({
+                    title: 'Happy Birthday Motu! 🎉',
+                    text: 'Wishing you the most amazing birthday ever!',
+                    confirmButtonText: 'Celebrate! ✨',
+                    confirmButtonColor: '#2b0008',
+                    background: '#fdfaf6',
+                    backdrop: `rgba(0,0,0,0.7)`
+                }).then(() => {
+                    triggerBirthdayAnimation();
+                });
+            }
+
+            // 3. "The Promise" Alert
+            const isPromise = currentData.topic === 'The Promise' || (currentData.text && currentData.text.includes('Maine tumse bahut kuch maanga'));
+            if (isPromise && !hasAlertedPromise) {
+                hasAlertedPromise = true;
+                Swal.fire({
+                    title: 'My Promise 🤞',
+                    text: 'Let\'s grow together. I will always be there for you. Amsterdam jana hai na? and haa Japan and aur bhi country hai mere mind mein waha bhi chalenge and India ke sare dham and mandir bhi chalenge and also jaha tum bolo! (Will never make you cry)',
+                    confirmButtonText: 'Forever ❤️',
+                    confirmButtonColor: '#2b0008',
+                    background: '#fdfaf6',
+                    backdrop: `rgba(0,0,0,0.7)`
+                });
+            }
+        }
+    }
+
+    function triggerBirthdayAnimation() {
+        hasAnimatedBirthday = true;
+
+        const container = document.createElement('div');
+        container.style.position = 'fixed';
+        container.style.top = '0';
+        container.style.left = '0';
+        container.style.width = '100vw';
+        container.style.height = '100vh';
+        container.style.pointerEvents = 'none';
+        container.style.zIndex = '9999';
+        container.style.overflow = 'hidden';
+        document.body.appendChild(container);
+
+        const items = ['🎉', '💖', '🤗', '✨', '🎈', '🎊'];
+        const colors = ['#ff4d4d', '#d8b4fe', '#ffdb58', '#4287f5', '#50C878'];
+
+        for (let i = 0; i < 80; i++) {
+            const el = document.createElement('div');
+            el.style.position = 'absolute';
+
+            if (Math.random() > 0.4) {
+                el.innerText = items[Math.floor(Math.random() * items.length)];
+                el.style.fontSize = (Math.random() * 25 + 15) + 'px';
+            } else {
+                el.style.width = (Math.random() * 12 + 6) + 'px';
+                el.style.height = (Math.random() * 25 + 10) + 'px';
+                el.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+                el.style.opacity = Math.random() * 0.5 + 0.5;
+                el.style.borderRadius = Math.random() > 0.5 ? '50%' : '2px';
+            }
+
+            el.style.left = Math.random() * 100 + 'vw';
+            el.style.top = '-10vh';
+
+            const duration = Math.random() * 3 + 2.5;
+            const delay = Math.random() * 1.5;
+
+            el.style.animation = `confetti-fall ${duration}s ${delay}s linear forwards`;
+
+            container.appendChild(el);
+        }
+
+        setTimeout(() => {
+            container.remove();
+        }, 8000);
+    }
+
+    // Wait for fonts to load before calculating pagination height
+    document.fonts.ready.then(() => {
+        initDiary();
+
+        // Initial SweetAlert and Audio Trigger
+        Swal.fire({
+            title: 'Pyaari Lizu ❤️',
+            text: 'I made this special diary just for you. Please turn your volume up! and give me your time!',
+            confirmButtonText: 'Open Diary 📖',
+            confirmButtonColor: '#2b0008',
+            background: '#fdfaf6',
+            backdrop: `rgba(92, 0, 17, 0.8)`,
+            allowOutsideClick: false // Forces them to click the button to trigger audio
+        }).then((result) => {
+            if (result.isConfirmed) {
+                bgMusic.play().catch(e => console.log("Audio play failed (browser policy):", e));
+            }
+        });
+    });
+</script>
+</body>
+</html>
