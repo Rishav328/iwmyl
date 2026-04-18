@@ -2,40 +2,223 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Happy Birthday Dear Life</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Secret Access Portal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
+        body {
+            /* A subtle gradient background */
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
         }
-
-        .body {
-            background: #000;
-            width: 100vw;
-            height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
+        .fade-in {
+            animation: fadeIn 0.4s ease-in-out;
         }
-
-        .card {
-            background: #fff;
-            width: 80%;
-            height: 80vh;
-            border-radius: 15px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        /* Calculator specific styles */
+        .calc-btn {
+            @apply bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-3 px-4 rounded shadow transition duration-150 ease-in-out active:bg-gray-400 active:scale-95;
+        }
+        .calc-btn-op {
+            @apply bg-indigo-500 hover:bg-indigo-600 text-white font-semibold py-3 px-4 rounded shadow transition duration-150 ease-in-out active:bg-indigo-700 active:scale-95;
+        }
+        .calc-btn-eq {
+            @apply bg-green-500 hover:bg-green-600 text-white font-semibold py-3 px-4 rounded shadow transition duration-150 ease-in-out active:bg-green-700 active:scale-95 col-span-2;
         }
     </style>
 </head>
-<body>
+<body class="flex items-center justify-center">
 
-    <div class="body">
-        <div class="card">
-            <h1>Dear Diary</h1>
+    <!-- LOGIN SCREEN -->
+    <div id="login-screen" class="bg-white p-8 rounded-2xl shadow-xl w-full max-w-sm fade-in">
+        <div class="text-center mb-6">
+            <h2 class="text-2xl font-bold text-gray-800">Password Required</h2>
+            <p class="text-gray-500 text-sm mt-1">Please enter your password</p>
+        </div>
+        
+        <div class="space-y-4">
+            <div>
+                <input type="password" id="password-input" 
+                       class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition" 
+                       placeholder="Enter password..."
+                       autofocus>
+            </div>
+            <button id="submit-btn" 
+                    class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg transition duration-200 shadow-md">
+                Unlock
+            </button>
         </div>
     </div>
 
+    <!-- CALCULATOR SCREEN (Initially Hidden) -->
+    <div id="calculator-screen" class="hidden bg-gray-900 p-6 rounded-3xl shadow-2xl w-full max-w-xs fade-in">
+        <div class="mb-4">
+            <!-- Secondary display for previous operations -->
+            <div id="previous-operand" class="text-gray-400 text-right text-sm h-5 overflow-hidden"></div>
+            <!-- Main display -->
+            <div id="current-operand" class="bg-gray-800 text-white text-right text-4xl p-3 rounded-lg mt-1 overflow-x-auto whitespace-nowrap shadow-inner">0</div>
+        </div>
+
+        <div class="grid grid-cols-4 gap-3">
+            <button class="calc-btn col-span-2 !bg-red-400 hover:!bg-red-500 text-white" onclick="clearDisplay()">C</button>
+            <button class="calc-btn col-span-1" onclick="deleteNumber()">⌫</button>
+            <button class="calc-btn-op" onclick="chooseOperation('/')">÷</button>
+
+            <button class="calc-btn" onclick="appendNumber('7')">7</button>
+            <button class="calc-btn" onclick="appendNumber('8')">8</button>
+            <button class="calc-btn" onclick="appendNumber('9')">9</button>
+            <button class="calc-btn-op" onclick="chooseOperation('*')">×</button>
+
+            <button class="calc-btn" onclick="appendNumber('4')">4</button>
+            <button class="calc-btn" onclick="appendNumber('5')">5</button>
+            <button class="calc-btn" onclick="appendNumber('6')">6</button>
+            <button class="calc-btn-op" onclick="chooseOperation('-')">-</button>
+
+            <button class="calc-btn" onclick="appendNumber('1')">1</button>
+            <button class="calc-btn" onclick="appendNumber('2')">2</button>
+            <button class="calc-btn" onclick="appendNumber('3')">3</button>
+            <button class="calc-btn-op" onclick="chooseOperation('+')">+</button>
+
+            <button class="calc-btn col-span-2" onclick="appendNumber('0')">0</button>
+            <button class="calc-btn" onclick="appendNumber('.')">.</button>
+            <button class="calc-btn-op" onclick="compute()">=</button>
+        </div>
+    </div>
+
+    <script>
+        // --- LOGIN LOGIC ---
+        const validPasswords = [
+            "rishav", "liza", "aish", "aishwaray", 
+            "lishav", "riza", "motu", "kuchu"
+        ];
+
+        const loginScreen = document.getElementById('login-screen');
+        const calcScreen = document.getElementById('calculator-screen');
+        const passwordInput = document.getElementById('password-input');
+        const submitBtn = document.getElementById('submit-btn');
+
+        function checkPassword() {
+            // Get the input, remove surrounding spaces, and convert to lowercase
+            const enteredPassword = passwordInput.value.trim().toLowerCase();
+
+            if (validPasswords.includes(enteredPassword)) {
+                // Correct password -> Redirect
+                window.location.href = 'main.html';
+            } else {
+                // Wrong password -> Show Calculator
+                loginScreen.classList.add('hidden');
+                calcScreen.classList.remove('hidden');
+                // Clear input just in case they manage to navigate back
+                passwordInput.value = '';
+            }
+        }
+
+        submitBtn.addEventListener('click', checkPassword);
+        
+        // Allow pressing "Enter" in the password field
+        passwordInput.addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') {
+                checkPassword();
+            }
+        });
+
+
+        // --- CALCULATOR LOGIC ---
+        let currentOperandText = '';
+        let previousOperandText = '';
+        let operation = undefined;
+
+        const currentDisplay = document.getElementById('current-operand');
+        const previousDisplay = document.getElementById('previous-operand');
+
+        function appendNumber(number) {
+            // Prevent multiple decimals
+            if (number === '.' && currentOperandText.includes('.')) return;
+            // Limit length to prevent overflow visually
+            if (currentOperandText.length > 15) return;
+            
+            if (currentOperandText === '0' && number !== '.') {
+                currentOperandText = number.toString();
+            } else {
+                currentOperandText = currentOperandText.toString() + number.toString();
+            }
+            updateDisplay();
+        }
+
+        function deleteNumber() {
+            currentOperandText = currentOperandText.toString().slice(0, -1);
+            if (currentOperandText === '') currentOperandText = '0';
+            updateDisplay();
+        }
+
+        function clearDisplay() {
+            currentOperandText = '0';
+            previousOperandText = '';
+            operation = undefined;
+            updateDisplay();
+        }
+
+        function chooseOperation(op) {
+            if (currentOperandText === '' && op === '-') {
+                // Allow negative numbers
+                currentOperandText = '-';
+                updateDisplay();
+                return;
+            }
+            if (currentOperandText === '' || currentOperandText === '-') return;
+            if (previousOperandText !== '') {
+                compute();
+            }
+            operation = op;
+            previousOperandText = currentOperandText;
+            currentOperandText = '';
+            updateDisplay();
+        }
+
+        function compute() {
+            let computation;
+            const prev = parseFloat(previousOperandText);
+            const current = parseFloat(currentOperandText);
+            
+            if (isNaN(prev) || isNaN(current)) return;
+
+            switch (operation) {
+                case '+': computation = prev + current; break;
+                case '-': computation = prev - current; break;
+                case '*': computation = prev * current; break;
+                case '/': 
+                    if (current === 0) {
+                        alert("Cannot divide by zero");
+                        clearDisplay();
+                        return;
+                    }
+                    computation = prev / current; 
+                    break;
+                default: return;
+            }
+
+            // Fix floating point precision issues
+            currentOperandText = Math.round(computation * 100000000) / 100000000;
+            operation = undefined;
+            previousOperandText = '';
+            updateDisplay();
+        }
+
+        function updateDisplay() {
+            currentDisplay.innerText = currentOperandText || '0';
+            if (operation != null) {
+                let opSymbol = operation;
+                if (opSymbol === '*') opSymbol = '×';
+                if (opSymbol === '/') opSymbol = '÷';
+                previousDisplay.innerText = `${previousOperandText} ${opSymbol}`;
+            } else {
+                previousDisplay.innerText = '';
+            }
+        }
+    </script>
 </body>
 </html>
